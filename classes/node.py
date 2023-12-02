@@ -16,7 +16,7 @@ class Node:
         pos = canvas.toCanvasCoords(self.position)
 
         width = 4 if self.is_selected else 1
-        canvas.create_oval(pos.x-5, pos.y-5, pos.x+5, pos.y+5, width=width, fill='#444')
+        canvas.create_oval(pos.x-6, pos.y-6, pos.x+5, pos.y+5, width=width, fill='#444')
         canvas.create_text(pos.x-8, pos.y, anchor=tk.E, text=self.title)
 
     def get_info_frame(self, parent: tk.Misc, callback = lambda: 1) -> tk.Frame:

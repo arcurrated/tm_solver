@@ -41,17 +41,23 @@ def calculate_simple(forces: list[Force]) -> bool:
                     b[j] = b[i]
                     b[i] = tmp
     
-    # todo: удаляем нулевые строки
+    # удаляем нулевые строки и столбцы
+    i = 0
+    length = len(A)
+    while i < length:
+        if A[i][i] == 0:
+            del b[i]
+            for j in range(0, length):
+                del A[j][i]
+            del A[i]
+            i -= 1
+            length -= 1
+        i += 1
 
     x = solve_gauss(A, b)
     if x is None:
         return False
-    
-    print('from calc: ')
-    print(A)
-    print(b)
-    print(x)
-    
+
     for i, val in enumerate(x):
         orig_f: Force = forces[forces_map[i]]
         norm = orig_f.norm()
