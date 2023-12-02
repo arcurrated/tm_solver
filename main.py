@@ -201,7 +201,7 @@ class MainWindow:
     def calculate_schema(self):
         res = calculate_simple(self.forces)
         if not res:
-            messagebox.showerror("Ошибка при рассчете", "Ошибка при рассчете: Неопределенных сил должно быть 3")
+            messagebox.showerror("Ошибка при расчете", "Ошибка при расчете: Неопределенных сил должно быть 3")
         else:
             self.update_info_column()
 
