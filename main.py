@@ -4,7 +4,6 @@ from tkinter import ttk
 from classes import V2, Node, Rod, CoordCanvas, AppConfig, Force
 from canvas_utils import draw_grid
 from calculator import calculate_simple
-from forces_table import update_forces_table
 
 class MainWindow:
     nodes: list[Node]
@@ -201,7 +200,7 @@ class MainWindow:
     def calculate_schema(self):
         res = calculate_simple(self.forces)
         if not res:
-            messagebox.showerror("Ошибка при расчете", "Ошибка при расчете: Неопределенных сил должно быть 3")
+            messagebox.showerror("Ошибка при расчете", "Задача не решается")
         else:
             self.update_info_column()
 
@@ -220,9 +219,16 @@ class MainWindow:
         self.rods.clear()
         self.forces.clear()
         self.redraw_canvas()
+        self.update_info_column()
 
     def update_info_column(self):
-        update_forces_table(self.forces_table, self.forces)
+        # update forces table
+        self.forces_table.delete(*self.forces_table.get_children())
+
+        for force in self.forces:
+            vals = (force.title, '-' if not force.defined else round(force.x, 4) , '-' if not force.defined else round(force.y, 4))
+            self.forces_table.insert('', tk.END, values=vals)
+
         for child in self.selected_obj_info_frame.winfo_children():
             child.destroy()
         
