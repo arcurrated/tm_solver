@@ -1,5 +1,5 @@
 class AppConfig:
-    selectionThreshold: int
+    selection_threshold: int
     
-    def __init__(self, selectionThreshold=10):
-        self.selectionThreshold = selectionThreshold
+    def __init__(self, selection_threshold=10):
+        self.selection_threshold = selection_threshold

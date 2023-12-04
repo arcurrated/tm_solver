@@ -1,5 +1,8 @@
 
 def solve_gauss(A, b):
+    '''
+        return None if some diag element is 0
+    '''
     n = len(A)
     x = [] # make vector with zeros
     for i in range(0, n):
@@ -9,6 +12,9 @@ def solve_gauss(A, b):
             return None
     
     for i in range(0, n):
+        if A[i][i] == 0:
+            return None
+        
         for k in range(i+1, n):
             b[k] = b[k] - b[i]*A[k][i]/A[i][i]
             tmp = []

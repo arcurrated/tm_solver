@@ -19,7 +19,9 @@ class Force(V2):
 
         super().__init__(x, y)
         self.node = node
-        
+    
+    def __str__(self):
+        return "x: {}, y: {}, norm: {}, defined: {}".format(self.x, self.y, self.norm(), self.defined)
 
     def draw(self, canvas: CoordCanvas):
         pos = canvas.toCanvasCoords(self.node.position)

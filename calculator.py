@@ -1,7 +1,76 @@
 from slau_solver import solve_gauss
-from classes import Force, V2, Node
+from classes import Force, V2, Node, Rod
+
+def calculate_farm(rods: list[Rod], ex_forces: list[Force]) -> bool:
+    # находим глобальные неизвестные (реакции)
+    calculate_simple(ex_forces)
+
+    # находим все задействованные ноды
+    nodes = []
+    for rod in rods:
+        # flush defined flag
+        rod.inner_force_defined = False
+        for n in rod.nodes:
+            if n not in nodes:
+                nodes.append(n)
+
+    while True:
+        if len(nodes) == 0:
+            break
+        # take node
+        curr_node = nodes.pop()
+        # find external forces acting on node
+        forces: list[Force] = []
+        for force in ex_forces:
+            if force.node == curr_node:
+                forces.append(force)
+
+        # find rods connected with node and add co-directed force
+        rods_map: list[tuple[int]] = [] 
+        # rods map - variable with tuples like (forces_index, fods_index, k)
+        # for after-calculation force assignment
+        c = 0 # counter of undefined forces
+        for rod in rods:
+            if curr_node in rod.nodes:
+                k = 1 # if co-directed
+                if curr_node == rod.nodes[1]:
+                    # opposite directed
+                    k = -1
+                rods_map.append((len(forces), rods.index(rod), k))
+                if not rod.inner_force_defined:
+                    c += 1
+                forces.append(Force(curr_node, 
+                                    k * rod.inner_force.x, 
+                                    k * rod.inner_force.y, 
+                                    defined=rod.inner_force_defined))
+        if c > 2:
+            # undefined forces more than 2, wa cannot solve this system.
+            # maybe later with other nodes we will calculate some rod inner forces...
+            # we will try again and again
+            nodes.insert(0, curr_node)
+            continue
+            # once we have to stop it, but not today. Today we loops forever
+
+        res: bool = calculate_simple(forces)
+        if not res:
+            print("ERROR! UB UB UB")
+            return False
+        
+        # propagate forces
+        # el[2] is k koff which defined direction of force.
+        # system solves relatively this node, but if this is a second node of rod, we must reverse it
+        # we have to store force as the force from first node of rod to second
+        for el in rods_map:
+            rods[el[1]].inner_force.x = forces[el[0]].x * el[2]
+            rods[el[1]].inner_force.y = forces[el[0]].y * el[2]
+            rods[el[1]].inner_force_defined = True
+
+    return True
 
 def calculate_simple(forces: list[Force]) -> bool:
+    '''
+        Найти неопределенные силы. Возвращает успех/неудача
+    '''
     undef_forces_counter = 0
 
     A = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
@@ -96,6 +165,7 @@ def get_kof(pos1: V2, pos2: V2, pos3: V2):
 
 
 if __name__ == '__main__':
+    print('Test simple: ')
     n1 = Node(V2(0, 0))
     n2 = Node(V2(5, 0))
     n3 = Node(V2(1, 1))
@@ -104,13 +174,49 @@ if __name__ == '__main__':
     f1 = Force(n1, 0, 10, defined=False)
     f2 = Force(n2, 10, 0, defined=False)
     f3 = Force(n2, 0, 10, defined=False)
+
     f4 = Force(n3, 0, -100, defined=True)
     f5 = Force(n4, -120, 0, defined=True)
 
-    tmp = [f1, f2, f3, f4, f5]
+    forces = [f1, f2, f3, f4, f5]
 
-    calculate_simple(tmp)
+    calculate_simple(forces)
 
     print("Result")
-    for f in tmp:
+    for f in forces:
         print(f)
+
+    print('Test farm: ')
+    n1 = Node(V2(0, 0), title='A') # A
+    n2 = Node(V2(0, 15), title='B') # B
+    n3 = Node(V2(10, 10), title='C') # C
+    n4 = Node(V2(10, 0), title='D') # D
+    n5 = Node(V2(20, 5), title='E') # E
+
+    f1 = Force(n1, 0, 10, defined=False)
+    f2 = Force(n1, 10, 0, defined=False)
+    f3 = Force(n2, 10, 0, defined=False)
+
+    f4 = Force(n5, 0, -150, defined=True)
+    # f5 = Force(n4, -120, 0, defined=True)
+    # todo: debug!
+
+    r1 = Rod(n1, n2)
+    r2 = Rod(n1, n4)
+    r3 = Rod(n2, n3)
+    r4 = Rod(n2, n4)
+    r5 = Rod(n3, n4)
+    r6 = Rod(n5, n3)
+    r7 = Rod(n5, n4)
+
+    forces = [f1, f2, f3, f4]
+    rods = [r1, r2, r3, r4, r5, r6, r7]
+    
+
+    calculate_farm(rods, forces)
+
+    print("Result")
+    for f in forces:
+        print(f)
+    for r in rods:
+        print(r)

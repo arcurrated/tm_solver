@@ -18,7 +18,7 @@ class V2:
         return (self.x**2+self.y**2)**(1/2)
 
     def __str__(self):
-        return "x: {}, y: {}".format(self.x, self.y)
+        return "x: {}, y: {}, norm: {}".format(self.x, self.y, round(self.norm(), 2))
 
     def __add__(self, other):
         if type(other) == V2 or issubclass(type(other), V2):

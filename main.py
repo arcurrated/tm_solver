@@ -3,14 +3,14 @@ from tkinter import messagebox
 from tkinter import ttk
 from classes import V2, Node, Rod, CoordCanvas, AppConfig, Force
 from canvas_utils import draw_grid
-from calculator import calculate_simple
+from calculator import calculate_simple, calculate_farm
 
 class MainWindow:
     nodes: list[Node]
     rods: list[Rod]
     forces: list[Force]
 
-    selectedItem: Node | Rod = None
+    selected_item: Node | Force | Rod = None
     
     canvas_width: int = 900
     canvas_height: int = 700
@@ -54,8 +54,11 @@ class MainWindow:
         clear_space_btn = tk.Button(top_bar, text='Очистить область', command=self.handle_clear_space_btn)
         clear_space_btn.pack(side=tk.LEFT)
 
-        calc_btn = tk.Button(top_bar, default='active', text='Рассчитать', command=self.calculate_schema)
-        calc_btn.pack(side=tk.RIGHT)
+        calc_btn = tk.Button(top_bar, default='active', text='Найти неопределенные', command=self.calculate_schema)
+        calc_btn.pack(side=tk.LEFT)
+
+        calc_farm_btn = tk.Button(top_bar, default='active', text='Рассчитать ферму', command=self.calculate_farm)
+        calc_farm_btn.pack(side=tk.RIGHT)
 
         O_position=V2(self.canvas_width/2, self.canvas_height/2)
         canvas = CoordCanvas(canvas_frame, width=self.canvas_width, height=self.canvas_height, O_position=O_position, scale=1)
@@ -93,7 +96,7 @@ class MainWindow:
         self.rods = []
         self.forces = []
         self.last_drag_position = V2(0, 0)
-        self.config = AppConfig(selectionThreshold=10)
+        self.config = AppConfig(selection_threshold=10)
 
         self.root = root
         self.canvas_frame = canvas_frame
@@ -130,72 +133,100 @@ class MainWindow:
         '''
         if self.workspace_mode == 0:
             # detect nearest object
+            self.selected_item = None
+            for f in self.forces:
+                f.is_selected = False
+            for r in self.rods:
+                r.is_selected = False
+            for n in self.nodes:
+                n.is_selected = False
+
+            r_index, _ = self.get_nearest_rod(global_click_pos)
+            if r_index is not None:
+                self.rods[r_index].is_selected = True
+                self.selected_item = self.rods[r_index]
+
             finded_force = None
-            minD = self.config.selectionThreshold+1
+            minD = self.config.selection_threshold+1
             for force in self.forces:
                 force.is_selected = False
                 dist = (force.arrow_canvas_coordinates-click_pos).norm()
                 if dist < minD:
                     minD = dist
                     finded_force = force
-            self.selectedItem = None
             if finded_force is not None:
                 finded_force.is_selected = True
-                self.selectedItem = finded_force
+                self.rods[r_index].is_selected = False # очень часто силы и стержни пересекаются
+                self.selected_item = finded_force
 
-            index, alreadySelectedIndex = self.get_hearest_node(global_click_pos)
-            if alreadySelectedIndex is not None:
-                self.nodes[alreadySelectedIndex].is_selected = False
-                self.selectedItem = None
+            index, _ = self.get_nearest_node(global_click_pos)
             if index is not None:
-                self.selectedItem = None # deselect
-                if alreadySelectedIndex != index:
-                    self.nodes[index].is_selected = True
-                    self.selectedItem = self.nodes[index]
-            
+                self.nodes[index].is_selected = True
+                self.selected_item = self.nodes[index]
 
         elif self.workspace_mode == 1:
             self.nodes.append(Node(global_click_pos))
         elif self.workspace_mode == 2:
-            index, alreadySelectedIndex = self.get_hearest_node(global_click_pos)
+            index, already_selected_index = self.get_nearest_node(global_click_pos)
             
             if index is not None:
                 self.nodes[index].is_selected = True
-                if alreadySelectedIndex is not None and alreadySelectedIndex != index:
-                    self.rods.append(Rod(self.nodes[index], self.nodes[alreadySelectedIndex]))
+                if already_selected_index is not None and already_selected_index != index:
+                    self.rods.append(Rod(self.nodes[already_selected_index], self.nodes[index]))
                     self.nodes[index].is_selected = False
-                    self.nodes[alreadySelectedIndex].is_selected = False
-                elif alreadySelectedIndex is not None:
+                    self.nodes[already_selected_index].is_selected = False
+                elif already_selected_index is not None:
                     self.nodes[index].is_selected = False
         elif self.workspace_mode == 3:
             # add force
-            index, _ = self.get_hearest_node(global_click_pos)
+            index, _ = self.get_nearest_node(global_click_pos)
             if index is not None:
                 self.forces.append(Force(node=self.nodes[index], x=0, y=-10))
 
         self.redraw_canvas()
         self.update_info_column()
 
-    def get_hearest_node(self, global_pos: V2):
+    def get_nearest_node(self, global_pos: V2):
         '''
-            i. e: selected_index, already_selected_index = get_hearest_node(V2(...));
+            i. e: selected_index, already_selected_index = get_nearest_node(V2(...));
             if selected_index not exists - None;
             if already_selected_index not exits - None;
         '''
         index = None
-        minDist = self.config.selectionThreshold + 1
-        alreadySelectedIndex = None
+        min_dist = self.config.selection_threshold + 1
+        already_selected_index = None
         for (i, node) in enumerate(self.nodes):
             if node.is_selected:
-                alreadySelectedIndex = i
+                already_selected_index = i
 
             pos1 = global_pos
             pos2 = node.position
             dist = ((pos1.x-pos2.x)**2 + (pos1.y-pos2.y)**2)**(1/2)
-            if dist <= self.config.selectionThreshold and dist < minDist:
-                minDist = dist
+            if dist <= self.config.selection_threshold and dist < min_dist:
+                min_dist = dist
                 index = i
-        return index, alreadySelectedIndex
+        return index, already_selected_index
+    
+    def get_nearest_rod(self, global_pos: V2):
+        '''
+            i. e: selected_index, already_selected_index = get_nearest_node(V2(...));
+            if selected_index not exists - None;
+            if already_selected_index not exits - None;
+        '''
+        index = None
+        minDist = 1
+        already_selected_index = None
+        for (i, rod) in enumerate(self.rods):
+            if rod.is_selected:
+                already_selected_index = i
+            len_of_rod = (rod.nodes[0].position-rod.nodes[1].position).norm()
+            delta1 = (rod.nodes[1].position - global_pos).norm()
+            delta2 = (rod.nodes[0].position - global_pos).norm()
+            dist = delta1 + delta2
+            if dist-len_of_rod < minDist:
+                minDist = dist-len_of_rod
+                index = i
+        return index, already_selected_index
     
     def calculate_schema(self):
         res = calculate_simple(self.forces)
@@ -203,7 +234,14 @@ class MainWindow:
             messagebox.showerror("Ошибка при расчете", "Задача не решается")
         else:
             self.update_info_column()
+        self.redraw_canvas()
 
+    def calculate_farm(self):
+        res = calculate_farm(self.rods, self.forces)
+        if not res:
+            messagebox.showerror("Ошибка при расчете", "Задача не решается")
+        else:
+            self.update_info_column()
         self.redraw_canvas()
 
     def register_switch_mode_handler(self, mode: int):
@@ -213,7 +251,7 @@ class MainWindow:
         return handler
             
     def handle_clear_space_btn(self):
-        self.selectedItem = None
+        self.selected_item = None
         self.update_info_column()
         self.nodes.clear()
         self.rods.clear()
@@ -233,12 +271,12 @@ class MainWindow:
             child.destroy()
         
         frame = self.selected_obj_info_frame
-        if self.selectedItem is None:
+        if self.selected_item is None:
             text = "Ничего не выделено"
             label = tk.Label(frame, text=text)
             label.pack(side=tk.TOP)
         else:
-            item_frame = self.selectedItem.get_info_frame(frame, self.redraw_canvas)
+            item_frame = self.selected_item.get_info_frame(frame, self.redraw_canvas)
             item_frame.pack(side=tk.TOP)
 
         self.root.update()

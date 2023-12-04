@@ -12,6 +12,9 @@ class Node:
         self.is_selected = False
         self.title = title
 
+    def __str__(self):
+        return "Node: {} {}".format(self.title, self.position)
+
     def draw(self, canvas: CoordCanvas):
         pos = canvas.toCanvasCoords(self.position)
 
