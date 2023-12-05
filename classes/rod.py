@@ -14,12 +14,14 @@ class Rod:
     def __init__(self, node1: Node, node2: Node):
         self.is_selected = False
         self.nodes = [node1, node2]
-
-        self.inner_force = node2.position - node1.position
-        self.inner_force_defined = False
+        self.flush_force()
 
     def __str__(self):
         return "Rod: from {} to {}. Inner force {} defined: {}".format(self.nodes[0], self.nodes[1], self.inner_force, self.inner_force_defined)
+    
+    def flush_force(self):
+        self.inner_force = self.nodes[1].position - self.nodes[0].position
+        self.inner_force_defined = False
 
     def draw(self, canvas: CoordCanvas):
         pos1 = canvas.toCanvasCoords(self.nodes[0].position)

@@ -9,7 +9,7 @@ def calculate_farm(rods: list[Rod], ex_forces: list[Force]) -> bool:
     nodes = []
     for rod in rods:
         # flush defined flag
-        rod.inner_force_defined = False
+        rod.flush_force()
         for n in rod.nodes:
             if n not in nodes:
                 nodes.append(n)
@@ -19,6 +19,7 @@ def calculate_farm(rods: list[Rod], ex_forces: list[Force]) -> bool:
             break
         # take node
         curr_node = nodes.pop()
+        print('curr_node: {}'.format(curr_node))
         # find external forces acting on node
         forces: list[Force] = []
         for force in ex_forces:
@@ -51,10 +52,18 @@ def calculate_farm(rods: list[Rod], ex_forces: list[Force]) -> bool:
             continue
             # once we have to stop it, but not today. Today we loops forever
 
+        for f in forces:
+            print(f)
+
         res: bool = calculate_simple(forces)
+        print('solved! ')
+        for f in forces:
+            print(f)
+        print('\n')
+        
         if not res:
-            print("ERROR! UB UB UB")
-            return False
+            nodes.insert(0, curr_node)
+            continue
         
         # propagate forces
         # el[2] is k koff which defined direction of force.
@@ -116,6 +125,8 @@ def calculate_simple(forces: list[Force]) -> bool:
     while i < length:
         if A[i][i] == 0:
             del b[i]
+            if i < len(forces_map):
+                del forces_map[i]
             for j in range(0, length):
                 del A[j][i]
             del A[i]
@@ -127,12 +138,20 @@ def calculate_simple(forces: list[Force]) -> bool:
     if x is None:
         return False
 
-    for i, val in enumerate(x):
-        orig_f: Force = forces[forces_map[i]]
-        norm = orig_f.norm()
-        orig_f.x = val * orig_f.x/norm
-        orig_f.y = val * orig_f.y/norm
-        orig_f.defined = True
+    # теперь нужно переустановить значения сил
+    for i, f in enumerate(forces):
+        if i in forces_map:
+            idx = forces_map.index(i)
+            val = x[idx]
+            norm = f.norm()
+            f.x = val * f.x/norm
+            f.y = val * f.y/norm
+            f.defined = True
+        elif not f.defined:
+            # если какая-то сила просто выпала из уравнения - считаем, что она нулевая
+            f.y = 0
+            f.x = 0
+            f.defined = True
 
     return True
 
@@ -165,6 +184,8 @@ def get_kof(pos1: V2, pos2: V2, pos3: V2):
 
 
 if __name__ == '__main__':
+    import random
+
     print('Test simple: ')
     n1 = Node(V2(0, 0))
     n2 = Node(V2(5, 0))
@@ -188,10 +209,12 @@ if __name__ == '__main__':
 
     print('Test farm: ')
     n1 = Node(V2(0, 0), title='A') # A
-    n2 = Node(V2(0, 15), title='B') # B
-    n3 = Node(V2(10, 10), title='C') # C
-    n4 = Node(V2(10, 0), title='D') # D
-    n5 = Node(V2(20, 5), title='E') # E
+    n2 = Node(V2(0, 300), title='B') # B
+    n3 = Node(V2(200, 200), title='C') # C
+    n4 = Node(V2(200, 0), title='D') # D
+    n5 = Node(V2(400, 100), title='E') # E
+    n6 = Node(V2(400, 0), title='NL1')
+    n7 = Node(V2(600, 0), title='NL2')
 
     f1 = Force(n1, 0, 10, defined=False)
     f2 = Force(n1, 10, 0, defined=False)
@@ -208,13 +231,16 @@ if __name__ == '__main__':
     r5 = Rod(n3, n4)
     r6 = Rod(n5, n3)
     r7 = Rod(n5, n4)
+    r8 = Rod(n5, n6)
+    r9 = Rod(n5, n7)
+    r10 = Rod(n6, n7)
 
     forces = [f1, f2, f3, f4]
-    rods = [r1, r2, r3, r4, r5, r6, r7]
+    rods = [r1, r2, r3, r4, r5, r6, r7, r8, r9, r10]
+
+    random.shuffle(rods)
     
-
     calculate_farm(rods, forces)
-
     print("Result")
     for f in forces:
         print(f)

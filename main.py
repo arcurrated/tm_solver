@@ -156,7 +156,8 @@ class MainWindow:
                     finded_force = force
             if finded_force is not None:
                 finded_force.is_selected = True
-                self.rods[r_index].is_selected = False # очень часто силы и стержни пересекаются
+                if r_index is not None:
+                    self.rods[r_index].is_selected = False # очень часто силы и стержни пересекаются
                 self.selected_item = finded_force
 
             index, _ = self.get_nearest_node(global_click_pos)
@@ -290,6 +291,8 @@ class MainWindow:
             mode_str = '+ узел'
         elif mode == 2:
             mode_str = '+ стержень'
+        elif mode == 3:
+            mode_str = '+ сила'
         else:
             mode_str = 'неопределен'
         self.mode_label.config(text='Режим: {}'.format(mode_str))
