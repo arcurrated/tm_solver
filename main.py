@@ -1,6 +1,9 @@
 import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
+from tkinter.filedialog import asksaveasfile
+
+from report_maker import make_report
 from classes import V2, Node, Rod, CoordCanvas, AppConfig, Force
 from canvas_utils import draw_grid
 from calculator import calculate_simple, calculate_farm
@@ -58,7 +61,10 @@ class MainWindow:
         calc_btn.pack(side=tk.LEFT)
 
         calc_farm_btn = tk.Button(top_bar, default='active', text='Рассчитать ферму', command=self.calculate_farm)
-        calc_farm_btn.pack(side=tk.RIGHT)
+        calc_farm_btn.pack(side=tk.LEFT)
+
+        create_report_btn = tk.Button(top_bar, text='Создать отчет', command=self.create_report)
+        create_report_btn.pack(side=tk.LEFT)
 
         O_position=V2(self.canvas_width/2, self.canvas_height/2)
         canvas = CoordCanvas(canvas_frame, width=self.canvas_width, height=self.canvas_height, O_position=O_position, scale=1)
@@ -244,6 +250,13 @@ class MainWindow:
         else:
             self.update_info_column()
         self.redraw_canvas()
+
+    def create_report(self):
+        f = asksaveasfile(mode='w', initialfile = 'report.pdf', defaultextension=".pdf")
+        if f is None: # asksaveasfile return `None` if dialog closed with "cancel".
+            return
+        make_report(f.name, self.nodes, self.rods, self.forces)
+        
 
     def register_switch_mode_handler(self, mode: int):
         def handler():

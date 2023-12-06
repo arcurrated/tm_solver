@@ -27,25 +27,36 @@ class Force(V2):
         pos = canvas.toCanvasCoords(self.node.position)
         arrow_length = 50
 
-        cos = self.x/self.norm()
-        sin = -self.y/self.norm()
-
-        to = pos + V2(
-            arrow_length*cos,
-            arrow_length*sin
-        )
+        arrow_pos, title_pos = self.get_relative_coords_for_drawing(arrow_length, 15)
+        to = pos + arrow_pos
+        title_pos = pos + title_pos
 
         self.arrow_canvas_coordinates = to # for handle clicks
 
-        title_pos = to + V2(
-            15*sin, -15*cos
-        )
         color = '#F9CE5F' if self.defined else '#bbb'
 
         width = 4 if self.is_selected else 2
         canvas.create_oval(pos.x-width, pos.y-width, pos.x+width, pos.y+width, fill=color, outline="")
         canvas.create_line(pos.x, pos.y, to.x, to.y, width=width, fill=color, arrow='last')
         canvas.create_text(title_pos.x, title_pos.y, text=self.title, justify=tk.CENTER)
+    
+    def get_relative_coords_for_drawing(self, arrow_length: float, title_dist: float) -> tuple[V2, V2]:
+        '''
+            возвращает два элемента V2. 
+            Первый - координата конца стрелки относительно начала вектора
+            Второй - положение подписи относительно начала вектора
+        '''
+        cos = self.x/self.norm()
+        sin = -self.y/self.norm()
+
+        arrow_pos: V2 = V2(
+            arrow_length*cos,
+            arrow_length*sin
+        )
+        title_pos: V2 = arrow_pos + V2(
+            title_dist*sin, -title_dist*cos
+        )
+        return arrow_pos, title_pos
 
     def get_info_frame(self, parent: tk.Misc, callback = lambda: 1) -> tk.Frame:
         frame: tk.Frame = tk.Frame(parent)
