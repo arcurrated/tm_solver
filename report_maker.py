@@ -1,5 +1,7 @@
 from reportlab.pdfgen import canvas
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from classes import V2, Node, Rod, Force
 
 
@@ -12,11 +14,16 @@ def make_report(fname, nodes: list[Node], rods: list[Rod], forces: list[Force]):
     c: canvas.Canvas = canvas.Canvas(fname, bottomup=0, pagesize=(w, h))
     c.setAuthor('@arcurrated')
 
+    # for UTF-8 support
+    pdfmetrics.registerFont(TTFont('FreeSans','fonts/FreeSans.ttf'))
+    tblstyle = TableStyle([('FONT', (0, 0), (-1, 1), 'FreeSans', 9)])
+    c.setFont('FreeSans', 12)
+
     px: int = 50 # padding
     py: int = 50
-    cursor: int = px # next element will be displayed on Y = cursor
+    cursor: int = py # next element will be displayed on Y = cursor
 
-    c.drawString(px, cursor, 'Schema: ')
+    c.drawString(px, cursor, 'Схема: ')
     cursor += 20
 
     # 1. detect bounding rect of image (minX, maxX, minY, maxY)
@@ -94,10 +101,10 @@ def make_report(fname, nodes: list[Node], rods: list[Rod], forces: list[Force]):
     rods_table_x = px+t_width + 10
     table_header_y = cursor
 
-    c.drawString(px, table_header_y, 'Forces: ')
+    c.drawString(px, table_header_y, 'Силы: ')
     cursor += 20
 
-    forces_data = [('Title', 'Proj X', 'Proj Y', 'Norm')]
+    forces_data = [('Имя', 'X проек.', 'Y проек.', 'Знач.')]
     for force in forces:
         forces_data.append((
             force.title, 
@@ -113,25 +120,25 @@ def make_report(fname, nodes: list[Node], rods: list[Rod], forces: list[Force]):
     #
     # drawOn(... , ..., ..., _sW = 1) лишь смещает верхний левый угол как нам нужно,
     # но не переворачивает таблицу
-    forces_table = Table(forces_data)
+    forces_table = Table(forces_data, style=tblstyle)
     forces_table.wrapOn(c, t_width, 20*len(forces)) # width, height
     forces_table.drawOn(c, px, cursor, 1)
 
     # 5. print rods data
-    c.drawString(rods_table_x, table_header_y, 'Rods: ')
-    rods_data = [('node\nStart', 'node\nEnd', 'Proj X', 'Proj Y', 'Value')]
+    c.drawString(rods_table_x, table_header_y, 'Стержни: ')
+    rods_data = [('Нач.', 'Кон.', 'Усилие')]
     for rod in rods:
         rods_data.append((
             rod.nodes[0].title, rod.nodes[1].title,
-            round(rod.inner_force.x, 4) if rod.inner_force_defined else '-',
-            round(rod.inner_force.y, 4) if rod.inner_force_defined else '-',
+            # round(rod.inner_force.x, 4) if rod.inner_force_defined else '-',
+            # round(rod.inner_force.y, 4) if rod.inner_force_defined else '-',
             round(rod.inner_force.norm(), 4) * \
                 (-1 if min(rod.inner_force.x, rod.inner_force.y) < 0 else 1) \
                     if rod.inner_force_defined else '-'
             # from A to B Value -10 means force directed opposite
         ))
     rods_data.reverse()
-    rods_table = Table(rods_data)
+    rods_table = Table(rods_data, style=tblstyle)
     rods_table.wrapOn(c, t_width, 20*len(rods))
     rods_table.drawOn(c, rods_table_x, cursor, 1)
 
