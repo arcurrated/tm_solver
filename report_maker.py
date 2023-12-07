@@ -42,7 +42,7 @@ def make_report(fname, nodes: list[Node], rods: list[Rod], forces: list[Force]):
             maxY = node.position.y
     # 2. calc scale and offset
     imgW = w-2*px # schema size on PDF
-    imgH = 300
+    imgH = 250
     #c.rect(px, cursor, imgW, imgH)
 
     offset: V2 = V2(-minX, -minY)
@@ -112,17 +112,12 @@ def make_report(fname, nodes: list[Node], rods: list[Rod], forces: list[Force]):
             round(force.y, 4) if force.defined else '-',
             round(force.norm(), 4) if force.defined else '-'))
 
-    forces_data.reverse()
-    # обращаем список для того, чтобы он корректно отрисовался
-    # по умолчанию у холста пдфки y=0 внизу листа о_О (ребята из Австралии походу)
-    # это чинится bottomup=0 при инициализации, но таблица сама себя отрисовывает
-    # и не в курсе о том, что теперь y=0 сверху.
-    #
-    # drawOn(... , ..., ..., _sW = 1) лишь смещает верхний левый угол как нам нужно,
-    # но не переворачивает таблицу
-    forces_table = Table(forces_data, style=tblstyle)
-    forces_table.wrapOn(c, t_width, 20*len(forces)) # width, height
-    forces_table.drawOn(c, px, cursor, 1)
+    # костыль для того, чтобы корректно везде отрисовывался UTF-8,
+    # иначе читаются только две строчки, остальные - черные квадраты
+    for i, el in enumerate(forces_data): 
+        tmp = Table([el], style=tblstyle, colWidths=(t_width/len(el)))
+        tmp.wrapOn(c, t_width, 20) # width, height
+        tmp.drawOn(c, px, cursor+20*i, 1)
 
     # 5. print rods data
     c.drawString(rods_table_x, table_header_y, 'Стержни: ')
@@ -137,10 +132,11 @@ def make_report(fname, nodes: list[Node], rods: list[Rod], forces: list[Force]):
                     if rod.inner_force_defined else '-'
             # from A to B Value -10 means force directed opposite
         ))
-    rods_data.reverse()
-    rods_table = Table(rods_data, style=tblstyle)
-    rods_table.wrapOn(c, t_width, 20*len(rods))
-    rods_table.drawOn(c, rods_table_x, cursor, 1)
+    
+    for i, el in enumerate(rods_data): 
+        tmp = Table([el], style=tblstyle, colWidths=(t_width/len(el)))
+        tmp.wrapOn(c, t_width, 20)
+        tmp.drawOn(c, rods_table_x, cursor+20*i, 1)
 
     c.save()
     
